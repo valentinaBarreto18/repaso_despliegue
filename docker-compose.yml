@@ -1,0 +1,107 @@
+version: '3.8'
+
+services:
+  # Base de datos PostgreSQL para mascotas
+  postgres-mascotas:
+    image: postgres:16-alpine
+    container_name: postgres-mascotas
+    environment:
+      POSTGRES_DB: mascotas_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-mascotas-data:/var/lib/postgresql/data
+    networks:
+      - veterinaria-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Base de datos PostgreSQL para citas
+  postgres-citas:
+    image: postgres:16-alpine
+    container_name: postgres-citas
+    environment:
+      POSTGRES_DB: citas_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres-citas-data:/var/lib/postgresql/data
+    networks:
+      - veterinaria-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Microservicio de Mascotas
+  servicio-mascotas:
+    build:
+      context: ./servicio-mascotas
+      dockerfile: Dockerfile
+    container_name: servicio-mascotas
+    environment:
+      DB_HOST: postgres-mascotas
+      DB_PORT: 5432
+      DB_NAME: mascotas_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres123
+    ports:
+      - "8081:8081"
+    networks:
+      - veterinaria-network
+    depends_on:
+      postgres-mascotas:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Microservicio de Citas
+  servicio-citas:
+    build:
+      context: ./servicio-citas
+      dockerfile: Dockerfile
+    container_name: servicio-citas
+    environment:
+      DB_HOST: postgres-citas
+      DB_PORT: 5432
+      DB_NAME: citas_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres123
+    ports:
+      - "8082:8082"
+    networks:
+      - veterinaria-network
+    depends_on:
+      postgres-citas:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # API Gateway
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    container_name: api-gateway
+    ports:
+      - "8080:8080"
+    networks:
+      - veterinaria-network
+    depends_on:
+      - servicio-mascotas
+      - servicio-citas
+    restart: unless-stopped
+
+networks:
+  veterinaria-network:
+    driver: bridge
+
+volumes:
+  postgres-mascotas-data:
+  postgres-citas-data:

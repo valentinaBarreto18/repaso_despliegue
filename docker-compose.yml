@@ -1,38 +1,18 @@
 version: '3.8'
 
 services:
-  # Base de datos PostgreSQL para mascotas
-  postgres-mascotas:
+  # Base de datos PostgreSQL única para toda la aplicación
+  postgres:
     image: postgres:16-alpine
-    container_name: postgres-mascotas
+    container_name: postgres-veterinaria
     environment:
-      POSTGRES_DB: mascotas_db
+      POSTGRES_DB: veterinaria_db
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres123
     ports:
       - "5432:5432"
     volumes:
-      - postgres-mascotas-data:/var/lib/postgresql/data
-    networks:
-      - veterinaria-network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # Base de datos PostgreSQL para citas
-  postgres-citas:
-    image: postgres:16-alpine
-    container_name: postgres-citas
-    environment:
-      POSTGRES_DB: citas_db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres123
-    ports:
-      - "5433:5432"
-    volumes:
-      - postgres-citas-data:/var/lib/postgresql/data
+      - postgres-veterinaria-data:/var/lib/postgresql/data
     networks:
       - veterinaria-network
     healthcheck:
@@ -48,9 +28,9 @@ services:
       dockerfile: Dockerfile
     container_name: servicio-mascotas
     environment:
-      DB_HOST: postgres-mascotas
+      DB_HOST: postgres
       DB_PORT: 5432
-      DB_NAME: mascotas_db
+      DB_NAME: veterinaria_db
       DB_USER: postgres
       DB_PASSWORD: postgres123
     ports:
@@ -58,7 +38,7 @@ services:
     networks:
       - veterinaria-network
     depends_on:
-      postgres-mascotas:
+      postgres:
         condition: service_healthy
     restart: unless-stopped
 
@@ -69,9 +49,9 @@ services:
       dockerfile: Dockerfile
     container_name: servicio-citas
     environment:
-      DB_HOST: postgres-citas
+      DB_HOST: postgres
       DB_PORT: 5432
-      DB_NAME: citas_db
+      DB_NAME: veterinaria_db
       DB_USER: postgres
       DB_PASSWORD: postgres123
     ports:
@@ -79,7 +59,7 @@ services:
     networks:
       - veterinaria-network
     depends_on:
-      postgres-citas:
+      postgres:
         condition: service_healthy
     restart: unless-stopped
 
@@ -103,5 +83,4 @@ networks:
     driver: bridge
 
 volumes:
-  postgres-mascotas-data:
-  postgres-citas-data:
+  postgres-veterinaria-data:
